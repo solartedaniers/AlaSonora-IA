@@ -1,11 +1,16 @@
+import asyncio
+import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, status
 from fastapi.security import APIKeyHeader
 
 from app.classifier import BirdNetClassifier
 from app.config import settings
+from app.schemas import ClassificationResponse
 
 api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
 
@@ -32,3 +37,37 @@ app = FastAPI(title="AlaSonora AI Engine", lifespan=lifespan)
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
+
+@app.post("/analyze", response_model=ClassificationResponse, dependencies=[Depends(require_api_key)])
+async def analyze(
+    audio: UploadFile,
+    min_confidence: float = Form(default=settings.default_min_confidence),
+    max_results: int = Form(default=settings.default_max_results),
+    latitude: float | None = Form(default=None),
+    longitude: float | None = Form(default=None),
+    recorded_at: datetime | None = Form(default=None),
+) -> ClassificationResponse:
+    suffix = os.path.splitext(audio.filename or "recording.wav")[1] or ".wav"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
+        tmp_file.write(await audio.read())
+        tmp_path = tmp_file.name
+
+    try:
+        loop = asyncio.get_running_loop()
+        # El análisis de BirdNET es bloqueante/CPU-bound (TFLite); se despacha
+        # a un ThreadPoolExecutor acotado para no congelar el event loop de
+        # FastAPI mientras corre.
+        candidates = await loop.run_in_executor(
+            app.state.inference_pool,
+            app.state.classifier.classify,
+            tmp_path,
+            latitude,
+            longitude,
+            recorded_at,
+            min_confidence,
+            max_results,
+        )
+    finally:
+        os.remove(tmp_path)
+
+    return ClassificationResponse(candidates=candidates)
