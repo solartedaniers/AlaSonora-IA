@@ -8,6 +8,7 @@ from birdnetlib import Recording
 from birdnetlib.analyzer import Analyzer
 
 from app.audio_preprocessing import AudioPreprocessor
+from app.audio_quality import AudioQualityAnalyzer
 from app.config import settings
 from app.schemas import ClassificationCandidate
 
@@ -23,6 +24,10 @@ class BirdNetClassifier:
     def __init__(self) -> None:
         self._analyzer = Analyzer()
         self._preprocessor = AudioPreprocessor(highpass_cutoff_hz=settings.audio_highpass_cutoff_hz)
+        self._quality_analyzer = AudioQualityAnalyzer(
+            flatness_threshold=settings.audio_noise_flatness_threshold,
+            bird_band_energy_ratio_threshold=settings.audio_bird_band_energy_ratio_threshold,
+        )
 
     def classify(
         self,
@@ -37,6 +42,12 @@ class BirdNetClassifier:
         # canales si la grabación viene en estéreo.
         samples, sample_rate = librosa.load(audio_path, sr=None, mono=True)
         cleaned_samples = self._preprocessor.clean(samples, sample_rate)
+
+        # Puede lanzar TooNoisyAudioError o NoBirdSignalDetectedError: se
+        # propagan tal cual hasta el endpoint, que las traduce a un mensaje
+        # específico para el usuario en vez de dejar que BirdNET intente
+        # analizar una señal que ya sabemos que no sirve.
+        self._quality_analyzer.assert_quality(cleaned_samples, sample_rate)
 
         cleaned_path = self._write_temp_wav(cleaned_samples, sample_rate)
         try:
