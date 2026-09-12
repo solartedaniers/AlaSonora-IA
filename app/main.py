@@ -1,10 +1,18 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import APIKeyHeader
 
 from app.classifier import BirdNetClassifier
 from app.config import settings
+
+api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
+
+
+def require_api_key(api_key: str = Depends(api_key_header)) -> None:
+    if api_key != settings.internal_api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
 @asynccontextmanager
