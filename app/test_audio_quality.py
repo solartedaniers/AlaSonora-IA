@@ -4,7 +4,7 @@ solo asserts). Ejecutar con: python -m app.test_audio_quality"""
 import numpy as np
 
 from app.audio_preprocessing import AudioPreprocessor
-from app.audio_quality import AudioQualityAnalyzer, TooNoisyAudioError
+from app.audio_quality import AudioQualityAnalyzer, NoBirdSignalDetectedError, TooNoisyAudioError
 
 SAMPLE_RATE = 22050
 DURATION_S = 3
@@ -32,6 +32,11 @@ def demo() -> None:
 
     _assert_quality(0.8 * np.sin(2 * np.pi * 3500 * TIME), None)
     _assert_quality(rng.normal(0, 1, SAMPLE_RATE * DURATION_S), TooNoisyAudioError)
+    _assert_quality(0.8 * np.sin(2 * np.pi * 120 * TIME), NoBirdSignalDetectedError)
+    _assert_quality(np.zeros(SAMPLE_RATE * DURATION_S), NoBirdSignalDetectedError)
+    _assert_quality(
+        0.8 * np.sin(2 * np.pi * 3500 * TIME) + 0.25 * rng.normal(0, 1, SAMPLE_RATE * DURATION_S), None
+    )
 
     print("audio_quality self-check: OK")
 
