@@ -17,7 +17,8 @@ class AudioPreprocessor:
         self._filter_order = filter_order
 
     def clean(self, samples: np.ndarray, sample_rate: int) -> np.ndarray:
-        return self._apply_highpass(samples, sample_rate)
+        filtered = self._apply_highpass(samples, sample_rate)
+        return self._normalize(filtered)
 
     def _apply_highpass(self, samples: np.ndarray, sample_rate: int) -> np.ndarray:
         nyquist = sample_rate / 2
@@ -25,3 +26,9 @@ class AudioPreprocessor:
         # atrás) para no introducir desfase de fase en la señal.
         sos = butter(self._filter_order, self._highpass_cutoff_hz / nyquist, btype="highpass", output="sos")
         return sosfiltfilt(sos, samples)
+
+    def _normalize(self, samples: np.ndarray) -> np.ndarray:
+        peak = np.max(np.abs(samples))
+        if peak == 0:
+            return samples
+        return samples / peak
