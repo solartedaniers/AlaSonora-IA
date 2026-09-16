@@ -67,26 +67,35 @@ class BirdNetClassifier:
         finally:
             os.remove(cleaned_path)
 
-        # BirdNET scores audio in 3-second chunks, so the same species can
-        # show up several times across one recording — keep only its best
-        # confidence, then rank species (not chunks) highest-first.
-        best_by_species: dict[str, ClassificationCandidate] = {}
-        for detection in recording.detections:
-            scientific_name = detection["scientific_name"]
-            confidence = float(detection["confidence"])
-            existing = best_by_species.get(scientific_name)
-            if existing is None or confidence > existing.confidence:
-                best_by_species[scientific_name] = ClassificationCandidate(
-                    scientific_name=scientific_name,
-                    common_name=detection["common_name"],
-                    confidence=confidence,
-                )
-
-        ranked = sorted(best_by_species.values(), key=lambda c: c.confidence, reverse=True)
-        return ranked[:max_results]
+        return rank_candidates(recording.detections, max_results)
 
     def _write_temp_wav(self, samples, sample_rate: int) -> str:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
             cleaned_path = tmp_file.name
         sf.write(cleaned_path, samples, sample_rate)
         return cleaned_path
+
+
+def rank_candidates(detections: list[dict], max_results: int) -> list[ClassificationCandidate]:
+    """Turns birdnetlib's raw per-chunk detections into ranked, deduplicated
+    species candidates. Pure function (no model, no I/O), so it can be
+    tested without loading BirdNET.
+
+    BirdNET scores audio in 3-second chunks, so the same species can show up
+    several times across one recording — keep only its best confidence, then
+    rank species (not chunks) highest-first.
+    """
+    best_by_species: dict[str, ClassificationCandidate] = {}
+    for detection in detections:
+        scientific_name = detection["scientific_name"]
+        confidence = float(detection["confidence"])
+        existing = best_by_species.get(scientific_name)
+        if existing is None or confidence > existing.confidence:
+            best_by_species[scientific_name] = ClassificationCandidate(
+                scientific_name=scientific_name,
+                common_name=detection["common_name"],
+                confidence=confidence,
+            )
+
+    ranked = sorted(best_by_species.values(), key=lambda c: c.confidence, reverse=True)
+    return ranked[:max_results]
