@@ -32,6 +32,24 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
   deployment can skip them; enabling the flag without them installed makes
   `/classify-photo` fail.
 
+## Render (native Python Web Service, no Docker)
+
+| Setting | Value |
+|---|---|
+| Root Directory | `ai-engine` |
+| Build Command | `pip install -r requirements.txt` (audio only; add `-r requirements-photo.txt` if photos are re-enabled) |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/health` |
+
+Environment variables:
+
+- `INTERNAL_API_KEY` (required, same value as the backend's `AI_ENGINE_API_KEY`).
+- `PHOTO_CLASSIFICATION_ENABLED=false` on 512 MB instances: only the audio
+  path fits (~360 MB in use); serving photos pushes the process to ~750 MB,
+  so `/classify-photo` answers 503 instead of loading the model.
+- Python comes from `.python-version` (3.12.3, the validated version); if
+  Render ignores it, set `PYTHON_VERSION=3.12.3`.
+
 ## Audio pipeline
 
 Every upload is cleaned (`AudioPreprocessor`: high-pass filter + peak
