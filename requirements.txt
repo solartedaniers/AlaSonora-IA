@@ -14,9 +14,11 @@ audioread
 numpy
 scipy
 soundfile
-# tflite-runtime has no Windows wheels; tensorflow is birdnetlib's own
-# fallback interpreter (see birdnetlib/analyzer.py) and works everywhere.
-tensorflow
+# LiteRT, el sucesor oficial de tflite-runtime (que no tiene wheels para
+# Python 3.12+ ni Windows): mismo Interpreter con ~180 MB menos de RAM que
+# TensorFlow completo. app/classifier.py lo registra con el nombre que
+# busca birdnetlib.
+ai-edge-litert
 
 # Photo-based identification (dennisjooo/Birds-Classifier-EfficientNetB2),
 # fully separate model/endpoint from the BirdNET audio pipeline above.
