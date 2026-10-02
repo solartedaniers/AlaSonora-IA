@@ -19,6 +19,7 @@ from app.schemas import ClassificationResponse, PhotoClassificationResponse
 TOO_NOISY_MESSAGE = "Demasiada interferencia de ruido, por favor grabe de nuevo o cargue un audio más limpio"
 NO_BIRD_SIGNAL_MESSAGE = "No se detecta sonido de aves en la grabación, por favor intente nuevamente"
 NO_BIRD_IN_PHOTO_MESSAGE = "No se pudo identificar un ave en esta foto, por favor intente con otra imagen"
+PHOTO_DISABLED_MESSAGE = "La identificación por foto no está disponible en este despliegue"
 
 api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
 
@@ -96,6 +97,8 @@ async def classify_photo(
     min_confidence: float = Form(default=settings.default_photo_min_confidence),
     max_results: int = Form(default=settings.default_photo_max_results),
 ) -> PhotoClassificationResponse:
+    if not settings.photo_classification_enabled:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=PHOTO_DISABLED_MESSAGE)
     image_bytes = await photo.read()
     loop = asyncio.get_running_loop()
     try:
