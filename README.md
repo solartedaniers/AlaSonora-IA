@@ -68,14 +68,19 @@ Todas salen de `app/config.py` (o del `.env`); solo `INTERNAL_API_KEY` es obliga
 | `DEFAULT_PHOTO_MAX_RESULTS` | `3` | Resultados máximos por foto |
 | `TOO_NOISY_MESSAGE`, `NO_BIRD_SIGNAL_MESSAGE`, `NO_BIRD_IN_PHOTO_MESSAGE`, `PHOTO_DISABLED_MESSAGE` | mensajes en español | Texto del `detail` que el backend reenvía al usuario |
 
-## Render (Web Service de Python nativo, sin Docker)
+## Despliegue en Render (Web Service de Python nativo, sin Docker)
+
+El servicio vive en la raíz de este repositorio, así que el Root Directory queda vacío.
 
 | Ajuste | Valor |
 |---|---|
-| Root Directory | `ai-engine` |
-| Build Command | `pip install -r requirements.txt` (solo audio; agrega `-r requirements-photo.txt` si se reactivan las fotos) |
+| Root Directory | *(vacío)* |
+| Build Command | `pip install -r requirements.txt && python -m app.prepare_runtime` (solo audio; agrega `-r requirements-photo.txt` si se reactivan las fotos) |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health Check Path | `/health` |
+
+`python -m app.prepare_runtime` genera en el build la caché de fuentes de Matplotlib (que importa
+`birdnetlib`) para que el arranque en frío no la construya.
 
 Variables de entorno:
 
