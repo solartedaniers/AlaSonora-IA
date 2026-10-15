@@ -1,0 +1,9 @@
+# Nada de secretos, entornos locales ni cachés dentro de la imagen.
+.env
+.venv/
+venv/
+__pycache__/
+.cache/
+.git/
+.github/
+docs/
