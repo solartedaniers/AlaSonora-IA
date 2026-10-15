@@ -41,6 +41,13 @@ def demo() -> None:
     assert [c.scientific_name for c in ranked] == ["Bubo virginianus", "Streptopelia decaocto"]
     assert ranked[0].confidence == 0.7
 
+    # max_results corta después de ordenar: quedan las especies con mejor confianza.
+    ranked = rank_candidates(normal, max_results=1)
+    assert [c.scientific_name for c in ranked] == ["Bubo virginianus"]
+
+    # Sin detecciones (nada superó min_confidence) el resultado es vacío, no un error.
+    assert rank_candidates([], max_results=3) == []
+
     print("classifier self-check: OK")
 
 
