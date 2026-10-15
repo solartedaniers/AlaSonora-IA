@@ -58,6 +58,8 @@ def demo() -> None:
     _assert_quality(rng.normal(0, 1, SAMPLE_RATE * DURATION_S), TooNoisyAudioError)
     _assert_quality(0.8 * np.sin(2 * np.pi * 120 * TIME), NoBirdSignalDetectedError)
     _assert_quality(np.zeros(SAMPLE_RATE * DURATION_S), NoBirdSignalDetectedError)
+    # Tono limpio por encima de los 8 kHz: no es ruido, pero tampoco cae en la banda de aves.
+    _assert_quality(0.8 * np.sin(2 * np.pi * 9500 * TIME), NoBirdSignalDetectedError)
     _assert_quality(
         0.8 * np.sin(2 * np.pi * 3500 * TIME) + 0.25 * rng.normal(0, 1, SAMPLE_RATE * DURATION_S), None
     )
