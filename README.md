@@ -99,3 +99,13 @@ frecuencias típicas de aves) antes de llegar a BirdNET; ver `app/audio_preproce
 `app/audio_quality.py`. Los umbrales se ajustan con variables de entorno
 (`AUDIO_HIGHPASS_CUTOFF_HZ`, `AUDIO_NOISE_FLATNESS_THRESHOLD`,
 `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD`).
+
+## Proyecto AlaSonora
+
+| Parte | Repositorio |
+|---|---|
+| Frontend (Angular, PWA con SSR) | https://github.com/solartedaniers/AlaSonora-Frontend |
+| Backend (Spring Boot, API REST) | https://github.com/solartedaniers/AlaSonora-Backend |
+| Motor de IA (este repositorio) | https://github.com/solartedaniers/AlaSonora-IA |
+
+App desplegada: https://alasonora-frontend.onrender.com
