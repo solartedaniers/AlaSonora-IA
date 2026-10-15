@@ -1,0 +1,4 @@
+# Solo para correr las pruebas: el despliegue instala únicamente requirements.txt.
+-r requirements.txt
+# El TestClient de starlette 1.x usa httpx2 (httpx queda como respaldo obsoleto).
+httpx2
