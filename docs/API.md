@@ -67,3 +67,17 @@ curl -X POST http://localhost:8000/classify-photo \
 ```
 
 Con `PHOTO_CLASSIFICATION_ENABLED=false` responde 503 sin importar torch ni transformers.
+
+## Errores
+
+Todas las respuestas de error tienen la forma `{"detail": ...}`. Los mensajes para el usuario se
+configuran con variables de entorno y el backend los reenvía tal cual.
+
+| Código | Ruta | Cuándo | `detail` |
+|---|---|---|---|
+| 401 | `/analyze`, `/classify-photo` | Falta la clave o es incorrecta | `Not authenticated` / `Invalid API key` |
+| 422 | `/analyze` | Demasiado ruido de fondo | `TOO_NOISY_MESSAGE` |
+| 422 | `/analyze` | Silencio o sin energía en la banda de aves | `NO_BIRD_SIGNAL_MESSAGE` |
+| 422 | `/classify-photo` | Ninguna predicción alcanza `min_confidence` | `NO_BIRD_IN_PHOTO_MESSAGE` |
+| 422 | ambas | Falta el archivo o un campo no es válido | lista de errores de validación de FastAPI |
+| 503 | `/classify-photo` | `PHOTO_CLASSIFICATION_ENABLED=false` | `PHOTO_DISABLED_MESSAGE` |
