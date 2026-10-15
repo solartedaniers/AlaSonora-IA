@@ -91,6 +91,16 @@ Variables de entorno:
 - Python sale de `.python-version` (3.12.3, la versión validada); si Render lo ignora, define
   `PYTHON_VERSION=3.12.3`.
 
+## Docker (opcional)
+
+Render no usa Docker para este servicio; la imagen sirve para correrlo igual que en producción en
+cualquier máquina.
+
+```bash
+docker build -t alasonora-ia .
+docker run --rm -p 8000:8000 -e INTERNAL_API_KEY=<clave> -e PHOTO_CLASSIFICATION_ENABLED=false alasonora-ia
+```
+
 ## Pipeline de audio
 
 Cada audio se limpia (`AudioPreprocessor`: filtro pasa-altos + normalización de pico) y pasa un
