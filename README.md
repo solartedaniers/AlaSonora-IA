@@ -26,6 +26,20 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 `AI_ENGINE_API_KEY` en el `.env` del backend debe ser igual a `INTERNAL_API_KEY` de este servicio.
 
+## Pruebas
+
+Las pruebas son autoverificaciones con `assert` (sin pytest) en `app/test_*.py`. Ninguna carga el
+modelo BirdNET: usan señales sintéticas o un clasificador falso.
+
+```bash
+pip install -r requirements-dev.txt   # agrega httpx2, que necesita el TestClient
+cp .env.example .env                  # basta con el valor de ejemplo de INTERNAL_API_KEY
+python -m app.run_tests               # corre todas y falla si alguna falla
+python -m app.test_audio_quality      # o una sola
+```
+
+El workflow `.github/workflows/ci.yml` corre lo mismo en cada push a `main`.
+
 ## Dependencias
 
 - `requirements.txt`: todo lo que necesita la ruta de audio (`/analyze`).
