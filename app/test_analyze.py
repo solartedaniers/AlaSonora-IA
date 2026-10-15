@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 
+from app.audio_quality import NoBirdSignalDetectedError, TooNoisyAudioError
 from app.config import settings
 from app.main import app
 from app.schemas import ClassificationCandidate
@@ -53,10 +54,25 @@ def _check_success() -> None:
     assert classifier.calls[0][1:] == (settings.default_min_confidence, settings.default_max_results, None, None)
 
 
+def _check_quality_errors() -> None:
+    # Cada error de calidad se traduce en un 422 con el mensaje que el backend reenvía al usuario.
+    expected = {
+        TooNoisyAudioError(): settings.too_noisy_message,
+        NoBirdSignalDetectedError(): settings.no_bird_signal_message,
+    }
+    for error, message in expected.items():
+        classifier = FakeClassifier(error=error)
+        response = _post(classifier)
+        assert response.status_code == 422, response.status_code
+        assert response.json()["detail"] == message
+        assert not os.path.exists(classifier.calls[0][0])
+
+
 def main() -> None:
     app.state.inference_pool = ThreadPoolExecutor(max_workers=1)
     try:
         _check_success()
+        _check_quality_errors()
     finally:
         app.state.inference_pool.shutdown()
         del app.state.inference_pool, app.state.classifier
