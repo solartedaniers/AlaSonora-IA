@@ -22,3 +22,27 @@ check (con `HEAD`) y el backend para saber si el motor ya despertó.
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
+
+## `POST /analyze`
+
+Clasifica una grabación con BirdNET. Cuerpo `multipart/form-data`:
+
+| Campo | Tipo | Obligatorio | Por defecto |
+|---|---|---|---|
+| `audio` | archivo de audio (el backend solo envía wav, flac o mp3) | sí | — |
+| `min_confidence` | número 0–1 | no | `DEFAULT_MIN_CONFIDENCE` |
+| `max_results` | entero | no | `DEFAULT_MAX_RESULTS` |
+| `recorded_at` | fecha ISO 8601 | no | — |
+| `latitude`, `longitude` | número | no | — (solo con GPS real; si llegan, BirdNET filtra por especies esperables en esa zona) |
+
+Antes de BirdNET el audio se limpia y pasa el control de calidad. Las especies se deduplican (mejor
+confianza por especie) y se descartan las clases de no-evento (voz humana, ruido, sirenas…).
+
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+  -F audio=@grabacion.wav -F min_confidence=0.25
+# {"candidates":[{"scientific_name":"Bubo virginianus","common_name":"Great Horned Owl","confidence":0.7}]}
+```
+
+Una lista vacía significa que ninguna especie superó el umbral.
