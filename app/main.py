@@ -13,7 +13,7 @@ from fastapi.security import APIKeyHeader
 from app.audio_quality import NoBirdSignalDetectedError, TooNoisyAudioError
 from app.classifier import BirdNetClassifier
 from app.config import settings
-from app.schemas import ClassificationResponse, PhotoClassificationResponse
+from app.schemas import ClassificationResponse, PhotoClassificationCandidate, PhotoClassificationResponse
 
 api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
 
@@ -114,7 +114,7 @@ def _load_photo_classifier():
     return BirdPhotoClassifier(settings.photo_model_id)
 
 
-def _classify_photo(image_bytes: bytes, min_confidence: float, max_results: int):
+def _classify_photo(image_bytes: bytes, min_confidence: float, max_results: int) -> list[PhotoClassificationCandidate]:
     from app.photo_classifier import NoBirdInPhotoError
 
     with _photo_classifier_lock:

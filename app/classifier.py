@@ -6,6 +6,7 @@ from datetime import datetime
 
 import ai_edge_litert.interpreter as litert_interpreter
 import librosa
+import numpy as np
 import soundfile as sf
 
 # birdnetlib busca el runtime liviano como "tflite_runtime" y, si no lo
@@ -106,7 +107,7 @@ class BirdNetClassifier:
 
         return rank_candidates(recording.detections, max_results)
 
-    def _write_temp_wav(self, samples, sample_rate: int) -> str:
+    def _write_temp_wav(self, samples: np.ndarray, sample_rate: int) -> str:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
             cleaned_path = tmp_file.name
         sf.write(cleaned_path, samples, sample_rate)
