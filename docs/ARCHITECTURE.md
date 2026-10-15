@@ -18,3 +18,14 @@ audio subido ─► archivo temporal ─► librosa.load (mono, tasa original)
 - Los archivos temporales se borran en `finally`, aunque el audio no pase el control de calidad.
 - Latitud y longitud son opcionales: solo con GPS real, porque restringen BirdNET a las especies
   esperables en esa zona.
+
+## Identificación por foto (`/classify-photo`)
+
+- `app/photo_classifier.py` (`BirdPhotoClassifier`) envuelve un modelo de Hugging Face
+  (EfficientNetB2 ajustado a 525 especies): softmax, top-k y umbral de confianza. Si ninguna
+  predicción alcanza el umbral lanza `NoBirdInPhotoError` (422).
+- Es independiente de BirdNET: otro modelo, otra entrada y otras dependencias
+  (`requirements-photo.txt`).
+- Se importa y carga de forma perezosa la primera vez que se usa, dentro del pool de inferencia;
+  un `threading.Lock` evita que dos peticiones simultáneas lo carguen dos veces.
+- `PHOTO_CLASSIFICATION_ENABLED=false` corta antes de importar nada y responde 503.
