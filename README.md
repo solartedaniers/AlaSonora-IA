@@ -49,6 +49,25 @@ El workflow `.github/workflows/ci.yml` corre lo mismo en cada push a `main`.
   librerías nunca se importan y el despliegue puede omitirlas; activarla sin instalarlas hace fallar
   `/classify-photo`.
 
+## Variables de entorno
+
+Todas salen de `app/config.py` (o del `.env`); solo `INTERNAL_API_KEY` es obligatoria.
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `INTERNAL_API_KEY` | — | Clave que el backend envía en `X-Internal-Api-Key` |
+| `DEFAULT_MIN_CONFIDENCE` | `0.1` | Confianza mínima de BirdNET si el backend no la envía |
+| `DEFAULT_MAX_RESULTS` | `3` | Especies máximas por análisis |
+| `MAX_INFERENCE_WORKERS` | `2` | Hilos del pool de inferencia |
+| `AUDIO_HIGHPASS_CUTOFF_HZ` | `300.0` | Corte del filtro pasa-altos |
+| `AUDIO_NOISE_FLATNESS_THRESHOLD` | `0.3` | Aplanamiento espectral a partir del cual el audio es ruido |
+| `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD` | `0.15` | Energía mínima en la banda de aves (0,4–8 kHz) |
+| `PHOTO_CLASSIFICATION_ENABLED` | `true` | En `false`, `/classify-photo` responde 503 sin cargar el modelo |
+| `PHOTO_MODEL_ID` | `dennisjooo/Birds-Classifier-EfficientNetB2` | Modelo de Hugging Face para fotos |
+| `DEFAULT_PHOTO_MIN_CONFIDENCE` | `0.3` | Confianza mínima por foto |
+| `DEFAULT_PHOTO_MAX_RESULTS` | `3` | Resultados máximos por foto |
+| `TOO_NOISY_MESSAGE`, `NO_BIRD_SIGNAL_MESSAGE`, `NO_BIRD_IN_PHOTO_MESSAGE`, `PHOTO_DISABLED_MESSAGE` | mensajes en español | Texto del `detail` que el backend reenvía al usuario |
+
 ## Render (Web Service de Python nativo, sin Docker)
 
 | Ajuste | Valor |
