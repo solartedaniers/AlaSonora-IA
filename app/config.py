@@ -25,5 +25,11 @@ class Settings(BaseSettings):
     default_photo_min_confidence: float = 0.3
     default_photo_max_results: int = 3
 
+    # Mensajes que el backend reenvía tal cual al usuario final en el "detail" de la respuesta.
+    too_noisy_message: str = "Demasiada interferencia de ruido, por favor grabe de nuevo o cargue un audio más limpio"
+    no_bird_signal_message: str = "No se detecta sonido de aves en la grabación, por favor intente nuevamente"
+    no_bird_in_photo_message: str = "No se pudo identificar un ave en esta foto, por favor intente con otra imagen"
+    photo_disabled_message: str = "La identificación por foto no está disponible en este despliegue"
+
 
 settings = Settings()

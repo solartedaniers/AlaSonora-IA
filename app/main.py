@@ -15,13 +15,6 @@ from app.classifier import BirdNetClassifier
 from app.config import settings
 from app.schemas import ClassificationResponse, PhotoClassificationResponse
 
-# Mensajes exactos que debe ver el usuario final en el frontend (vía el
-# backend de Spring Boot, que reenvía este "detail" sin modificarlo).
-TOO_NOISY_MESSAGE = "Demasiada interferencia de ruido, por favor grabe de nuevo o cargue un audio más limpio"
-NO_BIRD_SIGNAL_MESSAGE = "No se detecta sonido de aves en la grabación, por favor intente nuevamente"
-NO_BIRD_IN_PHOTO_MESSAGE = "No se pudo identificar un ave en esta foto, por favor intente con otra imagen"
-PHOTO_DISABLED_MESSAGE = "La identificación por foto no está disponible en este despliegue"
-
 api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
 
 
@@ -82,9 +75,9 @@ async def analyze(
             longitude,
         )
     except TooNoisyAudioError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=TOO_NOISY_MESSAGE) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.too_noisy_message) from exc
     except NoBirdSignalDetectedError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=NO_BIRD_SIGNAL_MESSAGE) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.no_bird_signal_message) from exc
     finally:
         os.remove(tmp_path)
 
@@ -98,7 +91,7 @@ async def classify_photo(
     max_results: int = Form(default=settings.default_photo_max_results),
 ) -> PhotoClassificationResponse:
     if not settings.photo_classification_enabled:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=PHOTO_DISABLED_MESSAGE)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=settings.photo_disabled_message)
     image_bytes = await photo.read()
     loop = asyncio.get_running_loop()
     candidates = await loop.run_in_executor(
@@ -129,4 +122,4 @@ def _classify_photo(image_bytes: bytes, min_confidence: float, max_results: int)
     try:
         return classifier.classify(image_bytes, min_confidence, max_results)
     except NoBirdInPhotoError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=NO_BIRD_IN_PHOTO_MESSAGE) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.no_bird_in_photo_message) from exc
