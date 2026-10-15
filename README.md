@@ -104,6 +104,7 @@ frecuencias típicas de aves) antes de llegar a BirdNET; ver `app/audio_preproce
 
 - [API del motor](docs/API.md): autenticación, endpoints, ejemplos y errores.
 - [Arquitectura](docs/ARCHITECTURE.md): pipeline de audio, identificación por foto y decisiones de memoria.
+- [Problemas conocidos](docs/TROUBLESHOOTING.md): errores frecuentes y cómo resolverlos.
 
 ## Proyecto AlaSonora
 
