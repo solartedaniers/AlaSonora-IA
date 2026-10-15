@@ -1,0 +1,21 @@
+# Secretos: solo el .env.example va al repositorio
+.env
+.env.*
+!.env.example
+
+# Entornos virtuales y cachés de Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Caché de Matplotlib que genera app.prepare_runtime en el build
+.cache/
+
+# IDEs y sistema operativo
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
