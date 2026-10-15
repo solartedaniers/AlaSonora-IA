@@ -46,3 +46,24 @@ curl -X POST http://localhost:8000/analyze \
 ```
 
 Una lista vacía significa que ninguna especie superó el umbral.
+
+## `POST /classify-photo`
+
+Identifica un ave en una foto con un modelo EfficientNetB2 de Hugging Face (`PHOTO_MODEL_ID`),
+independiente de BirdNET. El modelo se carga la primera vez que se usa, no al arrancar. Cuerpo
+`multipart/form-data`:
+
+| Campo | Tipo | Obligatorio | Por defecto |
+|---|---|---|---|
+| `photo` | archivo de imagen | sí | — |
+| `min_confidence` | número 0–1 | no | `DEFAULT_PHOTO_MIN_CONFIDENCE` |
+| `max_results` | entero | no | `DEFAULT_PHOTO_MAX_RESULTS` |
+
+```bash
+curl -X POST http://localhost:8000/classify-photo \
+  -H "X-Internal-Api-Key: $INTERNAL_API_KEY" \
+  -F photo=@ave.jpg
+# {"candidates":[{"label":"Azure Jay","confidence":0.91}]}
+```
+
+Con `PHOTO_CLASSIFICATION_ENABLED=false` responde 503 sin importar torch ni transformers.
