@@ -1,69 +1,63 @@
-# AlaSonora AI Engine
+# AlaSonora · Motor de IA
 
-Decoupled bioacoustic microservice: FastAPI + BirdNET (via `birdnetlib`),
-called only by the Spring Boot backend over the internal network.
+Microservicio bioacústico de AlaSonora: FastAPI + BirdNET (a través de `birdnetlib`). Identifica
+aves a partir de grabaciones de audio y, de forma opcional, a partir de fotos. Solo lo llama el
+backend de Spring Boot, autenticado con una clave interna; el navegador nunca habla con él.
 
-## Setup
+## Instalación
+
+Requiere Python 3.12.3 (la versión de `.python-version`).
 
 ```bash
-cd ai-engine
 python -m venv .venv
 .venv/Scripts/activate       # Windows
-pip install -r requirements.txt -r requirements-photo.txt
-cp .env.example .env         # set INTERNAL_API_KEY
+source .venv/bin/activate    # Linux / macOS
+pip install -r requirements.txt
+cp .env.example .env         # define INTERNAL_API_KEY
 ```
 
-## Run
+Para usar también la identificación por foto: `pip install -r requirements.txt -r requirements-photo.txt`.
+
+## Ejecución
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-`AI_ENGINE_API_KEY` in `backend/.env` must match `INTERNAL_API_KEY` here.
+`AI_ENGINE_API_KEY` en el `.env` del backend debe ser igual a `INTERNAL_API_KEY` de este servicio.
 
-## Dependencies
+## Dependencias
 
-- `requirements.txt`: everything the audio path (`/analyze`) needs.
-- `requirements-photo.txt`: torch, torchvision, transformers and pillow,
-  used **only** by `/classify-photo`. Install it only when photo
-  identification is enabled (`PHOTO_CLASSIFICATION_ENABLED=true`, the
-  default): `pip install -r requirements.txt -r requirements-photo.txt`.
-  With the flag set to `false` these libraries are never imported, so a
-  deployment can skip them; enabling the flag without them installed makes
-  `/classify-photo` fail.
+- `requirements.txt`: todo lo que necesita la ruta de audio (`/analyze`).
+- `requirements-photo.txt`: torch, torchvision, transformers y pillow, que **solo** usa
+  `/classify-photo`. Instálalo únicamente si la identificación por foto está activa
+  (`PHOTO_CLASSIFICATION_ENABLED=true`, el valor por defecto). Con la bandera en `false` estas
+  librerías nunca se importan y el despliegue puede omitirlas; activarla sin instalarlas hace fallar
+  `/classify-photo`.
 
-## Render (native Python Web Service, no Docker)
+## Render (Web Service de Python nativo, sin Docker)
 
-| Setting | Value |
+| Ajuste | Valor |
 |---|---|
 | Root Directory | `ai-engine` |
-| Build Command | `pip install -r requirements.txt` (audio only; add `-r requirements-photo.txt` if photos are re-enabled) |
+| Build Command | `pip install -r requirements.txt` (solo audio; agrega `-r requirements-photo.txt` si se reactivan las fotos) |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health Check Path | `/health` |
 
-Environment variables:
+Variables de entorno:
 
-- `INTERNAL_API_KEY` (required, same value as the backend's `AI_ENGINE_API_KEY`).
-- `PHOTO_CLASSIFICATION_ENABLED=false` on 512 MB instances: only the audio
-  path fits (~360 MB in use); serving photos pushes the process to ~750 MB,
-  so `/classify-photo` answers 503 instead of loading the model.
-- Python comes from `.python-version` (3.12.3, the validated version); if
-  Render ignores it, set `PYTHON_VERSION=3.12.3`.
+- `INTERNAL_API_KEY` (obligatoria, el mismo valor que `AI_ENGINE_API_KEY` del backend).
+- `PHOTO_CLASSIFICATION_ENABLED=false` en instancias de 512 MB: solo cabe la ruta de audio
+  (~360 MB en uso); servir fotos lleva el proceso a ~750 MB, así que `/classify-photo` responde 503
+  en lugar de cargar el modelo.
+- Python sale de `.python-version` (3.12.3, la versión validada); si Render lo ignora, define
+  `PYTHON_VERSION=3.12.3`.
 
-## Audio pipeline
+## Pipeline de audio
 
-Every upload is cleaned (`AudioPreprocessor`: high-pass filter + peak
-normalization) and quality-gated (`AudioQualityAnalyzer`: rejects excessive
-background noise or the absence of bird-like frequencies) before reaching
-BirdNET — see `app/audio_preprocessing.py` and `app/audio_quality.py`.
-Thresholds are tunable via env vars (`AUDIO_HIGHPASS_CUTOFF_HZ`,
-`AUDIO_NOISE_FLATNESS_THRESHOLD`, `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD`).
-
-Self-check (synthetic signals, no fixtures needed):
-
-```bash
-python -m app.test_audio_quality
-```
-
-See the repo root `README.md` for the full local setup guide covering all
-three services (frontend, backend, ai-engine) together.
+Cada audio se limpia (`AudioPreprocessor`: filtro pasa-altos + normalización de pico) y pasa un
+control de calidad (`AudioQualityAnalyzer`: rechaza el ruido de fondo excesivo o la ausencia de
+frecuencias típicas de aves) antes de llegar a BirdNET; ver `app/audio_preprocessing.py` y
+`app/audio_quality.py`. Los umbrales se ajustan con variables de entorno
+(`AUDIO_HIGHPASS_CUTOFF_HZ`, `AUDIO_NOISE_FLATNESS_THRESHOLD`,
+`AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD`).
