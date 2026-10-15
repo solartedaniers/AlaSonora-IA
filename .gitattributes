@@ -1,0 +1,2 @@
+# Fijo LF en el repositorio: el servicio corre en Linux y así Windows no reescribe los finales de línea.
+* text=auto eol=lf
