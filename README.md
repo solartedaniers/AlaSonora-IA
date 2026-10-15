@@ -100,6 +100,10 @@ frecuencias típicas de aves) antes de llegar a BirdNET; ver `app/audio_preproce
 (`AUDIO_HIGHPASS_CUTOFF_HZ`, `AUDIO_NOISE_FLATNESS_THRESHOLD`,
 `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD`).
 
+## Documentación
+
+- [API del motor](docs/API.md): autenticación, endpoints, ejemplos y errores.
+
 ## Proyecto AlaSonora
 
 | Parte | Repositorio |
