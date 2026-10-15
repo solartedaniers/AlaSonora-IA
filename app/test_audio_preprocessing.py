@@ -19,9 +19,22 @@ def _check_normalization(preprocessor: AudioPreprocessor) -> None:
     assert np.array_equal(preprocessor.clean(silence, SAMPLE_RATE), silence)
 
 
+def _component(samples: np.ndarray, frequency_hz: float) -> float:
+    spectrum = np.abs(np.fft.rfft(samples))
+    return float(spectrum[int(round(frequency_hz * len(samples) / SAMPLE_RATE))])
+
+
+def _check_highpass(preprocessor: AudioPreprocessor) -> None:
+    # El retumbo de 60 Hz (viento, manejo del micrófono) casi desaparece; el canto de 3 kHz se conserva.
+    rumble_and_song = np.sin(2 * np.pi * 60 * TIME) + np.sin(2 * np.pi * 3000 * TIME)
+    cleaned = preprocessor.clean(rumble_and_song, SAMPLE_RATE)
+    assert _component(cleaned, 60) < 0.01 * _component(cleaned, 3000)
+
+
 def main() -> None:
     preprocessor = AudioPreprocessor()
     _check_normalization(preprocessor)
+    _check_highpass(preprocessor)
     print("audio_preprocessing self-check: OK")
 
 
