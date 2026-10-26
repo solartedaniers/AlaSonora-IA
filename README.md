@@ -18,6 +18,15 @@ revisa que de verdad suene a ave y se lo pasa a BirdNET. Las rutas de análisis 
 backend, con una clave interna. El navegador solo toca `/health`, para despertar el servicio en Render
 (lo explico más abajo).
 
+## Identificación por foto: mejora futura, apagada a propósito
+
+La función principal de AlaSonora es identificar aves por su canto con BirdNET, y está activa. La
+identificación por foto la dejé como mejora futura y la apagué a propósito: es una decisión, no un
+error. El motor ya tiene el endpoint `/classify-photo`, pero en producción está desactivado con
+`PHOTO_CLASSIFICATION_ENABLED=false` en el motor y `photoIdentificationEnabled=false` en el frontend.
+Lo hice porque el servidor gratis de Render tiene 512 MB de RAM: el audio usa unos 360 MB y con fotos
+el proceso llegaría a unos 750 MB.
+
 ## Tecnologías
 
 | Pieza | Versión |
