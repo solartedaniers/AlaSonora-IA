@@ -1,6 +1,5 @@
-"""Self-check de PHOTO_CLASSIFICATION_ENABLED=false: /classify-photo responde 503 con su mensaje
-sin importar torch ni transformers (así funciona el despliegue de 512 MB).
-Ejecutar con: python -m app.test_photo_disabled"""
+"""Pruebo que con PHOTO_CLASSIFICATION_ENABLED=false /classify-photo responda 503 sin importar torch.
+Lo ejecuto con: python -m app.test_photo_disabled"""
 
 import sys
 

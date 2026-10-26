@@ -1,6 +1,5 @@
-"""Self-check de Settings: la clave interna es obligatoria y las variables de entorno mandan sobre
-los valores por defecto. No lee el .env (_env_file=None) para no depender del entorno local.
-Ejecutar con: python -m app.test_config"""
+"""Pruebo que la clave interna sea obligatoria y que las variables de entorno manden, sin leer el .env.
+Lo ejecuto con: python -m app.test_config"""
 
 import os
 from unittest import mock

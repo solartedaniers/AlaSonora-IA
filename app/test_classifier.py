@@ -1,7 +1,5 @@
-"""Self-check del filtrado de clases no-aviares de BirdNET (ponytail: sin
-pytest, solo asserts). No carga el modelo real: rank_candidates() es una
-función pura sobre dicts con la misma forma que recording.detections.
-Ejecutar con: python -m app.test_classifier"""
+"""Pruebo el filtrado de clases que no son aves con rank_candidates(), sin cargar el modelo.
+Lo ejecuto con: python -m app.test_classifier"""
 
 from app.classifier import rank_candidates
 
@@ -11,16 +9,14 @@ def _detection(scientific_name: str, common_name: str, confidence: float) -> dic
 
 
 def demo() -> None:
-    # Solo clases de no-evento superaron el umbral: debe quedar vacío, no
-    # "Human vocal" disfrazado de especie.
+    # Si solo pasaron no-eventos, queda vacío y no "Human vocal" como especie.
     only_human_voice = [
         _detection("Human vocal", "Human vocal", 0.92),
         _detection("Noise", "Noise", 0.4),
     ]
     assert rank_candidates(only_human_voice, max_results=3) == []
 
-    # Hay una especie real entre las clases de no-evento, aunque con menor
-    # score: debe devolverse esa, ignorando "Human vocal" pese a su score más alto.
+    # Devuelvo la especie real aunque "Human vocal" tenga más puntaje.
     mixed = [
         _detection("Human vocal", "Human vocal", 0.95),
         _detection("Luscinia megarhynchos", "Common Nightingale", 0.6),
@@ -30,8 +26,7 @@ def demo() -> None:
     assert len(ranked) == 1
     assert ranked[0].scientific_name == "Luscinia megarhynchos"
 
-    # Ninguna clase de no-evento involucrada: comportamiento normal, sin
-    # cambios — dedup por especie quedándose con la mejor confianza por chunk.
+    # Sin no-eventos, dejo una entrada por especie con su mejor confianza.
     normal = [
         _detection("Bubo virginianus", "Great Horned Owl", 0.5),
         _detection("Bubo virginianus", "Great Horned Owl", 0.7),

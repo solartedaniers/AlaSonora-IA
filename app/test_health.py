@@ -1,6 +1,5 @@
-"""Self-check de /health (ponytail: sin pytest, solo asserts). No arranca el lifespan, así que
-no carga el modelo: comprueba que la ruta responde a GET y a HEAD, que es lo que usa Render.
-Ejecutar con: python -m app.test_health"""
+"""Pruebo que /health responda a GET y a HEAD (lo que usa Render) sin cargar el modelo.
+Lo ejecuto con: python -m app.test_health"""
 
 from fastapi.testclient import TestClient
 

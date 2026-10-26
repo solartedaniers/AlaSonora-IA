@@ -1,6 +1,5 @@
-"""Self-check de los límites de subida: corto el audio o la foto que pasa el tope (413) y rechazo el
-formato que no reconozco por su firma (415), siempre antes de clasificar.
-Ejecutar con: python -m app.test_upload_limits"""
+"""Pruebo que corte lo que pasa el tope (413) y rechace la firma desconocida (415) antes de clasificar.
+Lo ejecuto con: python -m app.test_upload_limits"""
 
 import asyncio
 import io

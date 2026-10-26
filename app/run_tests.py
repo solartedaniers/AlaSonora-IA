@@ -1,5 +1,5 @@
 """Corro todas las autoverificaciones del motor (app/test_*.py) en un solo comando y fallo si alguna falla.
-Ejecutar con: python -m app.run_tests"""
+Lo ejecuto con: python -m app.run_tests"""
 
 import pkgutil
 import runpy

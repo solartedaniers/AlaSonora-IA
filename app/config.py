@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Toda la configuración sale de variables de entorno (o .env), nunca de valores quemados, igual que en el backend."""
+    """Leo toda la configuración de variables de entorno (o .env), nunca de valores quemados."""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
@@ -14,8 +14,7 @@ class Settings(BaseSettings):
     max_audio_bytes: int = 10485760
     max_photo_bytes: int = 10485760
 
-    # Preprocesamiento y control de calidad de audio (ver AudioPreprocessor
-    # y AudioQualityAnalyzer) — configurables para poder recalibrar sin tocar código.
+    # Dejo configurables el filtro y los umbrales de calidad para recalibrarlos sin tocar código.
     audio_highpass_cutoff_hz: float = 300.0
     audio_noise_flatness_threshold: float = 0.3
     audio_bird_band_energy_ratio_threshold: float = 0.15

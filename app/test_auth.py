@@ -1,6 +1,5 @@
-"""Self-check de la clave interna: /analyze y /classify-photo solo responden al backend, que envía
-X-Internal-Api-Key. No arranca el lifespan, así que no carga ningún modelo.
-Ejecutar con: python -m app.test_auth"""
+"""Pruebo que /analyze y /classify-photo solo respondan con X-Internal-Api-Key, sin cargar modelos.
+Lo ejecuto con: python -m app.test_auth"""
 
 from fastapi.testclient import TestClient
 

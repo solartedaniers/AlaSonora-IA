@@ -29,8 +29,7 @@ def require_api_key(api_key: str = Depends(api_key_header)) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Cargado una sola vez al iniciar: el modelo BirdNET pesa varios cientos
-    # de MB y su carga es lenta, repetirla por request sería inaceptable.
+    # Cargo BirdNET una sola vez al iniciar: pesa cientos de MB y tarda en cargar.
     app.state.classifier = BirdNetClassifier()
     app.state.inference_pool = ThreadPoolExecutor(max_workers=settings.max_inference_workers)
     yield
@@ -71,8 +70,7 @@ async def analyze(
     min_confidence: float = Form(default=settings.default_min_confidence),
     max_results: int = Form(default=settings.default_max_results),
     recorded_at: datetime | None = Form(default=None),
-    # Opcionales: solo deben venir cuando el backend tiene una ubicación GPS
-    # real del dispositivo (ver BirdNetClassifier.classify).
+    # Solo llegan cuando el backend tiene la ubicación GPS real del dispositivo.
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
 ) -> ClassificationResponse:
@@ -86,9 +84,7 @@ async def analyze(
 
     try:
         loop = asyncio.get_running_loop()
-        # El análisis de BirdNET es bloqueante/CPU-bound (TFLite); se despacha
-        # a un ThreadPoolExecutor acotado para no congelar el event loop de
-        # FastAPI mientras corre.
+        # BirdNET bloquea la CPU, así que lo corro en el pool para no congelar el event loop.
         candidates = await loop.run_in_executor(
             app.state.inference_pool,
             app.state.classifier.classify,
@@ -127,10 +123,7 @@ async def classify_photo(
     return PhotoClassificationResponse(candidates=candidates)
 
 
-# Carga perezosa: torch + transformers + EfficientNetB2 suman ~430 MB de RAM,
-# así que solo se importan la primera vez que alguien usa /classify-photo
-# (dentro del pool, para no congelar el event loop). El lock evita que dos
-# peticiones simultáneas carguen el modelo dos veces.
+# Cargo el modelo de fotos (~430 MB) solo la primera vez que se usa; el lock evita cargarlo dos veces.
 _photo_classifier_lock = threading.Lock()
 
 
