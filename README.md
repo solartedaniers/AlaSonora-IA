@@ -68,19 +68,23 @@ Todas salen de `app/config.py` (o del `.env`); solo `INTERNAL_API_KEY` es obliga
 | `DEFAULT_PHOTO_MAX_RESULTS` | `3` | Resultados máximos por foto |
 | `TOO_NOISY_MESSAGE`, `NO_BIRD_SIGNAL_MESSAGE`, `NO_BIRD_IN_PHOTO_MESSAGE`, `PHOTO_DISABLED_MESSAGE` | mensajes en español | Texto del `detail` que el backend reenvía al usuario |
 
-## Despliegue en Render (Web Service de Python nativo, sin Docker)
+## Despliegue en Render (Docker)
 
-El servicio vive en la raíz de este repositorio, así que el Root Directory queda vacío.
+Render construye y corre el `Dockerfile` de la raíz: Python 3.12.3, las dependencias de audio y la
+caché de fuentes de Matplotlib generada en el build con `python -m app.prepare_runtime` (la importa
+`birdnetlib`), para que el arranque en frío no la construya. El servicio vive en la raíz de este
+repositorio, así que el Root Directory queda vacío.
 
 | Ajuste | Valor |
 |---|---|
+| Runtime | Docker |
 | Root Directory | *(vacío)* |
-| Build Command | `pip install -r requirements.txt && python -m app.prepare_runtime` (solo audio; agrega `-r requirements-photo.txt` si se reactivan las fotos) |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Dockerfile Path | `./Dockerfile` |
 | Health Check Path | `/health` |
 
-`python -m app.prepare_runtime` genera en el build la caché de fuentes de Matplotlib (que importa
-`birdnetlib`) para que el arranque en frío no la construya.
+La imagen arranca con `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`; Render inyecta `PORT`.
+Solo instala `requirements.txt` (audio): si se reactivan las fotos, hay que sumar
+`requirements-photo.txt` al `Dockerfile`.
 
 Variables de entorno:
 
@@ -88,13 +92,11 @@ Variables de entorno:
 - `PHOTO_CLASSIFICATION_ENABLED=false` en instancias de 512 MB: solo cabe la ruta de audio
   (~360 MB en uso); servir fotos lleva el proceso a ~750 MB, así que `/classify-photo` responde 503
   en lugar de cargar el modelo.
-- Python sale de `.python-version` (3.12.3, la versión validada); si Render lo ignora, define
-  `PYTHON_VERSION=3.12.3`.
 
-## Docker (opcional)
+En el plan gratis Render apaga el servicio tras 15 minutos sin tráfico. El backend lo despierta
+solo cuando un usuario con sesión entra a la app o a Grabar (un GET a `/health`); no hay keep-alive.
 
-Render no usa Docker para este servicio; la imagen sirve para correrlo igual que en producción en
-cualquier máquina.
+### Correr la imagen en local
 
 ```bash
 docker build -t alasonora-ia .
