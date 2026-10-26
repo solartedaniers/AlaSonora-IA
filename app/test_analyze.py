@@ -1,6 +1,5 @@
-"""Self-check de /analyze con un clasificador falso en app.state (sin cargar BirdNET): reenvía los
-parámetros del formulario, devuelve los candidatos y borra siempre el audio temporal.
-Ejecutar con: python -m app.test_analyze"""
+"""Pruebo /analyze con un clasificador falso: reenvía el formulario, devuelve candidatos y borra el temporal.
+Lo ejecuto con: python -m app.test_analyze"""
 
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -13,11 +12,11 @@ from app.main import app
 from app.schemas import ClassificationCandidate
 
 AUTH = {"X-Internal-Api-Key": settings.internal_api_key}
-AUDIO = {"audio": ("song.wav", b"RIFF-fake-audio", "audio/wav")}
+AUDIO = {"audio": ("song.wav", b"RIFF\x00\x00\x00\x00WAVE-fake-audio", "audio/wav")}
 
 
 class FakeClassifier:
-    """Registra la llamada y responde lo que le indico, o lanza el error indicado."""
+    """Guardo la llamada y respondo lo que le indico, o lanzo el error indicado."""
 
     def __init__(self, result=None, error: Exception | None = None) -> None:
         self.result = result or []
@@ -48,23 +47,24 @@ def _check_success() -> None:
     assert (min_confidence, max_results, latitude, longitude) == (0.25, 2, 4.6, -74.1)
     assert audio_path.endswith(".wav") and not os.path.exists(audio_path)
 
-    # Sin formulario se usan los valores por defecto de la configuración y no se envía ubicación.
+    # Sin formulario uso los valores de la configuración y no envío ubicación.
     classifier = FakeClassifier()
     _post(classifier)
     assert classifier.calls[0][1:] == (settings.default_min_confidence, settings.default_max_results, None, None)
 
 
 def _check_quality_errors() -> None:
-    # Cada error de calidad se traduce en un 422 con el mensaje que el backend reenvía al usuario.
+    # Cada error de calidad responde 422 con su código; el texto lo pone el frontend.
     expected = {
-        TooNoisyAudioError(): settings.too_noisy_message,
-        NoBirdSignalDetectedError(): settings.no_bird_signal_message,
+        TooNoisyAudioError(): "TOO_NOISY",
+        NoBirdSignalDetectedError(): "NO_BIRD_SIGNAL",
     }
-    for error, message in expected.items():
+    for error, code in expected.items():
         classifier = FakeClassifier(error=error)
         response = _post(classifier)
         assert response.status_code == 422, response.status_code
-        assert response.json()["detail"] == message
+        assert response.json()["code"] == code
+        assert response.json()["detail"], "detail stays for older backends"
         assert not os.path.exists(classifier.calls[0][0])
 
 

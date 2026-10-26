@@ -1,5 +1,5 @@
-"""Self-check de las heurísticas de calidad de audio (ponytail: sin pytest,
-solo asserts). Ejecutar con: python -m app.test_audio_quality"""
+"""Pruebo las heurísticas de calidad de audio con asserts.
+Lo ejecuto con: python -m app.test_audio_quality"""
 
 import numpy as np
 
@@ -28,9 +28,7 @@ def _assert_quality(samples: np.ndarray, expected_error: type[Exception] | None)
 
 
 def _owl_hoot_train(fundamental_hz: float, n_harmonics: int = 3, pulse_s: float = 0.35, gap_s: float = 0.4) -> np.ndarray:
-    """Proxy sintético de un búho: pulsos de tono grave + armónicos, no un
-    canto continuo de una sola frecuencia como el resto de casos de este
-    archivo (así se parece más a un hoot real que a una nota pura)."""
+    """Simulo un búho con pulsos graves y armónicos, más parecido a un ululato real que una nota pura."""
     signal = np.zeros_like(TIME)
     t_cursor = 0.2
     while t_cursor + pulse_s < DURATION_S:
@@ -64,9 +62,7 @@ def demo() -> None:
         0.8 * np.sin(2 * np.pi * 3500 * TIME) + 0.25 * rng.normal(0, 1, SAMPLE_RATE * DURATION_S), None
     )
 
-    # Vocalización grave (tipo búho) con el mismo gradiente de ruido que el caso
-    # del paseriforme: no debe rechazarse solo porque su energía quede por debajo
-    # de la banda típica de 1-8 kHz.
+    # Un canto grave tipo búho no debe rechazarse solo por quedar bajo 1 kHz.
     _assert_quality(_with_noise(owl_call, rng.normal(0, 1, owl_call.shape), 0.15), None)
     _assert_quality(_with_noise(owl_call, rng.normal(0, 1, owl_call.shape), 0.35), None)
     _assert_quality(_with_noise(owl_call, rng.normal(0, 1, owl_call.shape), 0.8), TooNoisyAudioError)

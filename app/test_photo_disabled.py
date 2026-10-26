@@ -1,6 +1,5 @@
-"""Self-check de PHOTO_CLASSIFICATION_ENABLED=false: /classify-photo responde 503 con su mensaje
-sin importar torch ni transformers (así funciona el despliegue de 512 MB).
-Ejecutar con: python -m app.test_photo_disabled"""
+"""Pruebo que con PHOTO_CLASSIFICATION_ENABLED=false /classify-photo responda 503 sin importar torch.
+Lo ejecuto con: python -m app.test_photo_disabled"""
 
 import sys
 
@@ -24,7 +23,7 @@ def main() -> None:
         settings.photo_classification_enabled = original
 
     assert response.status_code == 503, response.status_code
-    assert response.json()["detail"] == settings.photo_disabled_message
+    assert response.json()["code"] == "PHOTO_DISABLED"
     # Con la bandera apagada nunca se carga el modelo de fotos.
     assert "app.photo_classifier" not in sys.modules
     print("photo disabled self-check: OK")

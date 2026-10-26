@@ -12,11 +12,7 @@ class NoBirdInPhotoError(Exception):
 
 
 class BirdPhotoClassifier:
-    """Envuelvo un modelo de clasificación de imágenes de Hugging Face (EfficientNetB2
-    ajustado con 525 especies de aves), independiente de BirdNetClassifier: otro modelo
-    y otra entrada (foto, no audio). Lo cargo una vez por la misma razón: recargarlo
-    en cada petición sería un desperdicio.
-    """
+    """Envuelvo el modelo de fotos de Hugging Face (EfficientNetB2, 525 aves); lo cargo una sola vez."""
 
     def __init__(self, model_id: str) -> None:
         self._processor = AutoImageProcessor.from_pretrained(model_id)
@@ -44,6 +40,5 @@ class BirdPhotoClassifier:
 
 
 def _format_label(raw_label: str) -> str:
-    # El modelo devuelve etiquetas en mayúsculas ("AZURE JAY"); se muestran
-    # en Title Case, más legible en la UI que gritarlas tal cual.
+    # El modelo da etiquetas en mayúsculas ("AZURE JAY"); las paso a Title Case para la UI.
     return raw_label.title()

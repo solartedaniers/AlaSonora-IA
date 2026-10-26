@@ -9,10 +9,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 
-# birdnetlib busca el runtime liviano como "tflite_runtime" y, si no lo
-# encuentra, importa TensorFlow completo (~180 MB más de RAM). LiteRT expone
-# el mismo Interpreter, así que se registra bajo ese nombre antes de que
-# birdnetlib se importe.
+# Registro LiteRT como "tflite_runtime" antes de importar birdnetlib; si no, carga TensorFlow completo (~180 MB más).
 sys.modules.setdefault("tflite_runtime", types.ModuleType("tflite_runtime"))
 sys.modules.setdefault("tflite_runtime.interpreter", litert_interpreter)
 
@@ -24,16 +21,8 @@ from app.audio_quality import AudioQualityAnalyzer
 from app.config import settings
 from app.schemas import ClassificationCandidate
 
-# BirdNET_GLOBAL_6K_V2.4 (el modelo que carga Analyzer() por defecto) incluye
-# estas clases de "no-evento" junto a las especies reales, para sonidos de
-# fondo comunes en grabaciones de campo. Verificado línea por línea contra el
-# archivo de labels real instalado (birdnetlib/models/analyzer/
-# BirdNET_GLOBAL_6K_V2.4_Labels.txt) el 2026-09-16 — si se actualiza el
-# modelo a otra versión, hay que revisar este archivo de nuevo, birdnetlib no
-# expone un mecanismo propio para distinguirlas (analyzer_lite.py tiene su
-# propia lista ad-hoc, con nombres distintos, para un modelo distinto).
-# No tienen binomio científico real: es.split("_")[0] da igual el string que
-# common_name, así que no se pueden confundir con una especie genuina.
+# Clases de "no-evento" del modelo BirdNET_GLOBAL_6K_V2.4 (revisadas contra sus labels el 2026-09-16).
+# Si cambio de versión del modelo, vuelvo a revisar esta lista.
 NON_EVENT_LABELS = frozenset({
     "Dog",
     "Engine",
@@ -50,11 +39,7 @@ NON_EVENT_LABELS = frozenset({
 
 
 class BirdNetClassifier:
-    """Envuelvo el modelo BirdNET-Analyzer de birdnetlib.
-
-    Lo cargo una sola vez (en __init__) y lo reutilizo en cada petición: el
-    intérprete y los pesos son los mismos para cualquier grabación.
-    """
+    """Envuelvo BirdNET-Analyzer; lo cargo una sola vez y lo reutilizo en cada petición."""
 
     def __init__(self) -> None:
         self._analyzer = Analyzer()
@@ -73,26 +58,16 @@ class BirdNetClassifier:
         latitude: float | None = None,
         longitude: float | None = None,
     ) -> list[ClassificationCandidate]:
-        # sr=None conserva la tasa de muestreo original; mono=True promedia
-        # canales si la grabación viene en estéreo.
+        # Conservo la frecuencia de muestreo original y paso el estéreo a mono.
         samples, sample_rate = librosa.load(audio_path, sr=None, mono=True)
         cleaned_samples = self._preprocessor.clean(samples, sample_rate)
 
-        # Puede lanzar TooNoisyAudioError o NoBirdSignalDetectedError: se
-        # propagan tal cual hasta el endpoint, que las traduce a un mensaje
-        # específico para el usuario en vez de dejar que BirdNET intente
-        # analizar una señal que ya sabemos que no sirve.
+        # Si el audio no sirve, lanzo el error de calidad y el endpoint lo responde con su código.
         self._quality_analyzer.assert_quality(cleaned_samples, sample_rate)
 
         cleaned_path = self._write_temp_wav(cleaned_samples, sample_rate)
         try:
-            # lat/lon es opcional a propósito: solo se debe pasar cuando
-            # viene de una ubicación real (GPS del dispositivo), nunca de un
-            # valor inventado/por defecto — pasarla activa
-            # set_predicted_species_list_from_position de birdnetlib, que excluye de
-            # entrada cualquier especie fuera de la lista "esperable" para
-            # esas coordenadas. Sin ubicación real, se evalúa contra el
-            # catálogo global completo (comportamiento anterior).
+            # Solo paso lat/lon si vienen del GPS real: BirdNET descarta las especies que no esperaría ahí.
             recording = Recording(
                 self._analyzer,
                 cleaned_path,
@@ -115,23 +90,13 @@ class BirdNetClassifier:
 
 
 def rank_candidates(detections: list[dict], max_results: int) -> list[ClassificationCandidate]:
-    """Convierto las detecciones crudas por fragmento en candidatos por especie,
-    sin repetidos y ordenados. Es una función pura (sin modelo ni E/S) para
-    probar el filtrado de no-eventos sin cargar BirdNET (ver test_classifier.py).
-
-    BirdNET puntúa el audio en fragmentos de 3 s, así que una especie puede
-    aparecer varias veces: me quedo con su mejor confianza y ordeno especies,
-    no fragmentos, de mayor a menor.
-    """
+    """BirdNET puntúa fragmentos de 3 s: me quedo con la mejor confianza de cada especie y las ordeno.
+    La dejo como función pura para probarla sin cargar el modelo."""
     best_by_species: dict[str, ClassificationCandidate] = {}
     for detection in detections:
         scientific_name = detection["scientific_name"]
         if scientific_name in NON_EVENT_LABELS:
-            # No es un ave: voz humana, ruido, sirena, etc. Se descarta aquí
-            # mismo, nunca llega a convertirse en un candidato — si es lo
-            # único que superó el umbral, el resultado queda vacío y el
-            # endpoint lo trata igual que "ninguna especie identificada"
-            # (ver DetectionClassificationService).
+            # Descarto lo que no es ave (voz, ruido, sirena); si solo quedaba eso, el resultado sale vacío.
             continue
         confidence = float(detection["confidence"])
         existing = best_by_species.get(scientific_name)

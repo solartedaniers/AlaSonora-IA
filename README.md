@@ -18,6 +18,15 @@ revisa que de verdad suene a ave y se lo pasa a BirdNET. Las rutas de análisis 
 backend, con una clave interna. El navegador solo toca `/health`, para despertar el servicio en Render
 (lo explico más abajo).
 
+## Identificación por foto: mejora futura, apagada a propósito
+
+La función principal de AlaSonora es identificar aves por su canto con BirdNET, y está activa. La
+identificación por foto la dejé como mejora futura y la apagué a propósito: es una decisión, no un
+error. El motor ya tiene el endpoint `/classify-photo`, pero en producción está desactivado con
+`PHOTO_CLASSIFICATION_ENABLED=false` en el motor y `photoIdentificationEnabled=false` en el frontend.
+Lo hice porque el servidor gratis de Render tiene 512 MB de RAM: el audio usa unos 360 MB y con fotos
+el proceso llegaría a unos 750 MB.
+
 ## Tecnologías
 
 | Pieza | Versión |
@@ -53,14 +62,15 @@ Salen de `app/config.py` y se pueden poner en un `.env` (hay un ejemplo en `.env
 | `DEFAULT_MIN_CONFIDENCE` | Confianza mínima de BirdNET si el backend no la envía | No | `0.1` |
 | `DEFAULT_MAX_RESULTS` | Especies máximas por análisis | No | `3` |
 | `MAX_INFERENCE_WORKERS` | Hilos del pool donde corre la inferencia | No | `2` |
+| `MAX_AUDIO_BYTES` | Tamaño máximo del audio. Lo leo por trozos y corto apenas lo pasa (413). Igual al límite del backend | No | `10485760` |
+| `MAX_PHOTO_BYTES` | Tamaño máximo de la foto | No | `10485760` |
 | `AUDIO_HIGHPASS_CUTOFF_HZ` | Corte del filtro pasa-altos | No | `300.0` |
 | `AUDIO_NOISE_FLATNESS_THRESHOLD` | Aplanamiento espectral a partir del cual considero el audio ruido | No | `0.3` |
 | `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD` | Energía mínima en la banda de aves (0,4–8 kHz) | No | `0.15` |
-| `PHOTO_CLASSIFICATION_ENABLED` | Activa `/classify-photo`. En `false` responde 503 sin cargar el modelo | No | `false` |
+| `PHOTO_CLASSIFICATION_ENABLED` | Activa `/classify-photo`. En `false` responde 503 sin cargar el modelo. Por defecto vale `true`; en producción y en `.env.example` va en `false`, porque la instalación base no trae torch ni transformers | No | `false` |
 | `PHOTO_MODEL_ID` | Modelo de Hugging Face para fotos | No | `dennisjooo/Birds-Classifier-EfficientNetB2` |
 | `DEFAULT_PHOTO_MIN_CONFIDENCE` | Confianza mínima por foto | No | `0.3` |
 | `DEFAULT_PHOTO_MAX_RESULTS` | Resultados máximos por foto | No | `3` |
-| `TOO_NOISY_MESSAGE`, `NO_BIRD_SIGNAL_MESSAGE`, `NO_BIRD_IN_PHOTO_MESSAGE`, `PHOTO_DISABLED_MESSAGE` | Texto del `detail` que el backend le muestra al usuario. Por defecto vienen en español | No | — |
 | `PORT` | Puerto del contenedor. Solo lo lee el `Dockerfile` y Render lo inyecta | No | `8000` |
 
 ## Correrlo en local
@@ -130,7 +140,7 @@ docker run --rm -p 8000:8000 -e INTERNAL_API_KEY=<clave> -e PHOTO_CLASSIFICATION
 
 1. **Limpieza** (`AudioPreprocessor`): filtro pasa-altos y normalización de pico.
 2. **Control de calidad** (`AudioQualityAnalyzer`): si hay demasiado ruido o no hay energía en las
-   frecuencias de aves, respondo 422 con un mensaje claro en vez de dejar que BirdNET adivine.
+   frecuencias de aves, respondo 422 con un código claro en vez de dejar que BirdNET adivine.
 3. **Análisis**: BirdNET puntúa el audio en fragmentos de 3 s. Le paso la fecha de grabación y, solo
    si el dispositivo tenía GPS real, la latitud y longitud, para que filtre las especies esperables en
    esa zona.
@@ -152,8 +162,11 @@ para no congelar el event loop.
 | `POST /analyze` | Sí | Multipart con `audio` y, opcionales, `min_confidence`, `max_results`, `recorded_at`, `latitude`, `longitude`. Devuelve `candidates` con `scientific_name`, `common_name` y `confidence` (0–1) |
 | `POST /classify-photo` | Sí | Multipart con `photo`. Devuelve `candidates` con `label` y `confidence`. Responde 503 si está desactivado |
 
-Respuestas de error: 401 si falta la clave o no coincide, y 422 con `detail` si el audio es puro
-ruido, si no suena a ave o si en la foto no hay un ave. El detalle, con ejemplos, está en
+Respuestas de error: 401 si falta la clave o no coincide, 413 si el archivo pasa el tope (`AUDIO_TOO_LARGE`,
+`PHOTO_TOO_LARGE`), 415 si su firma no es WAV, FLAC o MP3 para audio, ni JPEG, PNG o WebP para foto
+(`AUDIO_UNSUPPORTED`, `PHOTO_UNSUPPORTED`), y 422 si el audio es puro ruido, si no suena a ave o si en la
+foto no hay un ave (`TOO_NOISY`, `NO_BIRD_SIGNAL`, `NO_BIRD_IN_PHOTO`). Los errores propios traen un `code`
+en inglés que el backend traduce; el texto para el usuario vive en el i18n del frontend. El detalle, con ejemplos, está en
 [docs/API.md](docs/API.md).
 
 ## Despliegue en Render

@@ -3,7 +3,7 @@ import numpy as np
 
 
 class TooNoisyAudioError(Exception):
-    """La grabación tiene demasiado ruido estático/de fondo para analizarla."""
+    """La grabación tiene demasiado ruido de fondo para analizarla."""
 
 
 class NoBirdSignalDetectedError(Exception):
@@ -11,24 +11,8 @@ class NoBirdSignalDetectedError(Exception):
 
 
 class AudioQualityAnalyzer:
-    """Evalúa la señal antes de invertir cómputo en BirdNET.
-
-    Dos heurísticas espectrales, en orden:
-      1. Aplanamiento espectral (spectral flatness): el ruido blanco/estático
-         (viento, lluvia, interferencia) tiene un espectro plano (flatness
-         cercano a 1); un canto de ave es tonal, con picos de energía
-         concentrados (flatness bajo). Flatness alto ⇒ demasiado ruido.
-      2. Proporción de energía en banda 0.4-8 kHz: si casi toda la energía
-         está fuera de esa banda (tráfico, motores, retumbo) no hay patrón
-         de ave, aunque la grabación en sí no sea "ruidosa" en el sentido de
-         la heurística 1. El límite inferior es 400 Hz, no 1000 Hz: un valor
-         de 1000 Hz asume canto de paseriforme típico y rechaza por error
-         vocalizaciones reales de baja frecuencia (búhos/rapaces nocturnas,
-         ~250-800 Hz fundamental) aunque el ave sea audible y predominante.
-         400 Hz sigue excluyendo el retumbo grave puro (viento, tráfico) sin
-         cortar los armónicos de un búho, que típicamente ya caen por
-         encima de ese límite.
-    """
+    """Descarto el audio antes de gastar BirdNET: espectro plano = ruido; poca energía en 0.4-8 kHz = sin ave.
+    Empiezo la banda en 400 Hz y no en 1 kHz para no rechazar búhos y otras aves de canto grave."""
 
     BIRD_BAND_HZ = (400.0, 8000.0)
 
@@ -43,9 +27,7 @@ class AudioQualityAnalyzer:
         self._n_fft = n_fft
 
     def assert_quality(self, samples: np.ndarray, sample_rate: int) -> None:
-        # Silencio (o casi): no hay señal que analizar, ni ruido ni ave.
-        # Se descarta aparte porque un espectro todo-ceros vuelve indefinido
-        # (y en la práctica "ruidoso" por convención) el cálculo de flatness.
+        # Separo el silencio porque con un espectro en ceros el flatness queda indefinido.
         if self._is_silence(samples):
             raise NoBirdSignalDetectedError()
 
