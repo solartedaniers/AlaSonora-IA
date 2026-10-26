@@ -13,7 +13,7 @@ from app.main import app
 from app.schemas import ClassificationCandidate
 
 AUTH = {"X-Internal-Api-Key": settings.internal_api_key}
-AUDIO = {"audio": ("song.wav", b"RIFF-fake-audio", "audio/wav")}
+AUDIO = {"audio": ("song.wav", b"RIFF\x00\x00\x00\x00WAVE-fake-audio", "audio/wav")}
 
 
 class FakeClassifier:

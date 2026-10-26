@@ -79,5 +79,7 @@ configuran con variables de entorno y el backend los reenvía tal cual.
 | 422 | `/analyze` | Demasiado ruido de fondo | `TOO_NOISY_MESSAGE` |
 | 422 | `/analyze` | Silencio o sin energía en la banda de aves | `NO_BIRD_SIGNAL_MESSAGE` |
 | 422 | `/classify-photo` | Ninguna predicción alcanza `min_confidence` | `NO_BIRD_IN_PHOTO_MESSAGE` |
+| 413 | `/analyze`, `/classify-photo` | El archivo pasa `MAX_AUDIO_BYTES` o `MAX_PHOTO_BYTES`; dejo de leerlo apenas lo supera | `code`: `AUDIO_TOO_LARGE` / `PHOTO_TOO_LARGE` |
+| 415 | `/analyze`, `/classify-photo` | La firma del archivo no es WAV, FLAC o MP3 (audio) ni JPEG, PNG o WebP (foto) | `code`: `AUDIO_UNSUPPORTED` / `PHOTO_UNSUPPORTED` |
 | 422 | ambas | Falta el archivo o un campo no es válido | lista de errores de validación de FastAPI |
 | 503 | `/classify-photo` | `PHOTO_CLASSIFICATION_ENABLED=false` | `PHOTO_DISABLED_MESSAGE` |

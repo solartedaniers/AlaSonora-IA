@@ -5,14 +5,18 @@ import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from collections.abc import Callable
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, status
 from fastapi.security import APIKeyHeader
 
 from app.audio_quality import NoBirdSignalDetectedError, TooNoisyAudioError
+from app.bounded_upload import BoundedUploadReader, UploadTooLargeError
 from app.classifier import BirdNetClassifier
 from app.config import settings
+from app.errors import EngineError, register_engine_errors
+from app.file_signature import HEADER_BYTES, FileSignature
 from app.schemas import ClassificationResponse, PhotoClassificationCandidate, PhotoClassificationResponse
 
 api_key_header = APIKeyHeader(name="X-Internal-Api-Key")
@@ -34,6 +38,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="AlaSonora AI Engine", lifespan=lifespan)
+register_engine_errors(app)
+
+
+async def _read_upload(upload: UploadFile, max_bytes: int, is_supported: Callable[[bytes], bool], kind: str) -> bytes:
+    """Leo el archivo con tope de tamaño y reviso su formato real antes de clasificarlo."""
+    try:
+        content = await BoundedUploadReader(max_bytes).read(upload)
+    except UploadTooLargeError as exc:
+        raise EngineError(status.HTTP_413_CONTENT_TOO_LARGE, f"{kind}_TOO_LARGE", f"The {kind.lower()} file exceeds the maximum allowed size") from exc
+    if not is_supported(content[:HEADER_BYTES]):
+        raise EngineError(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f"{kind}_UNSUPPORTED", f"Unsupported {kind.lower()} format")
+    return content
 
 
 # Render revisa la ruta de salud con HEAD: sin aceptarlo respondía 405 y el servicio no quedaba sano al
@@ -54,9 +70,10 @@ async def analyze(
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
 ) -> ClassificationResponse:
+    content = await _read_upload(audio, settings.max_audio_bytes, FileSignature.is_supported_audio, "AUDIO")
     suffix = os.path.splitext(audio.filename or "recording.wav")[1] or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
-        tmp_file.write(await audio.read())
+        tmp_file.write(content)
         tmp_path = tmp_file.name
 
     try:
@@ -92,7 +109,7 @@ async def classify_photo(
 ) -> PhotoClassificationResponse:
     if not settings.photo_classification_enabled:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=settings.photo_disabled_message)
-    image_bytes = await photo.read()
+    image_bytes = await _read_upload(photo, settings.max_photo_bytes, FileSignature.is_supported_image, "PHOTO")
     loop = asyncio.get_running_loop()
     candidates = await loop.run_in_executor(
         app.state.inference_pool, _classify_photo, image_bytes, min_confidence, max_results

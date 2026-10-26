@@ -53,6 +53,8 @@ Salen de `app/config.py` y se pueden poner en un `.env` (hay un ejemplo en `.env
 | `DEFAULT_MIN_CONFIDENCE` | Confianza mínima de BirdNET si el backend no la envía | No | `0.1` |
 | `DEFAULT_MAX_RESULTS` | Especies máximas por análisis | No | `3` |
 | `MAX_INFERENCE_WORKERS` | Hilos del pool donde corre la inferencia | No | `2` |
+| `MAX_AUDIO_BYTES` | Tamaño máximo del audio. Lo leo por trozos y corto apenas lo pasa (413). Igual al límite del backend | No | `10485760` |
+| `MAX_PHOTO_BYTES` | Tamaño máximo de la foto | No | `10485760` |
 | `AUDIO_HIGHPASS_CUTOFF_HZ` | Corte del filtro pasa-altos | No | `300.0` |
 | `AUDIO_NOISE_FLATNESS_THRESHOLD` | Aplanamiento espectral a partir del cual considero el audio ruido | No | `0.3` |
 | `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD` | Energía mínima en la banda de aves (0,4–8 kHz) | No | `0.15` |
@@ -152,8 +154,10 @@ para no congelar el event loop.
 | `POST /analyze` | Sí | Multipart con `audio` y, opcionales, `min_confidence`, `max_results`, `recorded_at`, `latitude`, `longitude`. Devuelve `candidates` con `scientific_name`, `common_name` y `confidence` (0–1) |
 | `POST /classify-photo` | Sí | Multipart con `photo`. Devuelve `candidates` con `label` y `confidence`. Responde 503 si está desactivado |
 
-Respuestas de error: 401 si falta la clave o no coincide, y 422 con `detail` si el audio es puro
-ruido, si no suena a ave o si en la foto no hay un ave. El detalle, con ejemplos, está en
+Respuestas de error: 401 si falta la clave o no coincide, 413 si el archivo pasa el tope (`AUDIO_TOO_LARGE`,
+`PHOTO_TOO_LARGE`), 415 si su firma no es WAV, FLAC o MP3 para audio, ni JPEG, PNG o WebP para foto
+(`AUDIO_UNSUPPORTED`, `PHOTO_UNSUPPORTED`), y 422 si el audio es puro ruido, si no suena a ave o si en la
+foto no hay un ave. Los errores propios traen `code` y `detail`. El detalle, con ejemplos, está en
 [docs/API.md](docs/API.md).
 
 ## Despliegue en Render
