@@ -58,7 +58,7 @@ Salen de `app/config.py` y se pueden poner en un `.env` (hay un ejemplo en `.env
 | `AUDIO_HIGHPASS_CUTOFF_HZ` | Corte del filtro pasa-altos | No | `300.0` |
 | `AUDIO_NOISE_FLATNESS_THRESHOLD` | Aplanamiento espectral a partir del cual considero el audio ruido | No | `0.3` |
 | `AUDIO_BIRD_BAND_ENERGY_RATIO_THRESHOLD` | Energía mínima en la banda de aves (0,4–8 kHz) | No | `0.15` |
-| `PHOTO_CLASSIFICATION_ENABLED` | Activa `/classify-photo`. En `false` responde 503 sin cargar el modelo | No | `false` |
+| `PHOTO_CLASSIFICATION_ENABLED` | Activa `/classify-photo`. En `false` responde 503 sin cargar el modelo. Por defecto vale `true`; en producción y en `.env.example` va en `false`, porque la instalación base no trae torch ni transformers | No | `false` |
 | `PHOTO_MODEL_ID` | Modelo de Hugging Face para fotos | No | `dennisjooo/Birds-Classifier-EfficientNetB2` |
 | `DEFAULT_PHOTO_MIN_CONFIDENCE` | Confianza mínima por foto | No | `0.3` |
 | `DEFAULT_PHOTO_MAX_RESULTS` | Resultados máximos por foto | No | `3` |
