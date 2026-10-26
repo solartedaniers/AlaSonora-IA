@@ -70,16 +70,17 @@ Con `PHOTO_CLASSIFICATION_ENABLED=false` responde 503 sin importar torch ni tran
 
 ## Errores
 
-Todas las respuestas de error tienen la forma `{"detail": ...}`. Los mensajes para el usuario se
-configuran con variables de entorno y el backend los reenvía tal cual.
+Los errores propios del motor responden `{"code": "<CÓDIGO>", "detail": "<texto corto en inglés>"}`. El
+`code` es estable: el backend lo traduce a su `ApiErrorCode` y el frontend muestra el texto en español o
+inglés. El `detail` queda para leer en logs y para backends anteriores que solo leían ese campo.
 
-| Código | Ruta | Cuándo | `detail` |
+| Status | Ruta | Cuándo | `code` |
 |---|---|---|---|
-| 401 | `/analyze`, `/classify-photo` | Falta la clave o es incorrecta | `Not authenticated` / `Invalid API key` |
-| 422 | `/analyze` | Demasiado ruido de fondo | `TOO_NOISY_MESSAGE` |
-| 422 | `/analyze` | Silencio o sin energía en la banda de aves | `NO_BIRD_SIGNAL_MESSAGE` |
-| 422 | `/classify-photo` | Ninguna predicción alcanza `min_confidence` | `NO_BIRD_IN_PHOTO_MESSAGE` |
-| 413 | `/analyze`, `/classify-photo` | El archivo pasa `MAX_AUDIO_BYTES` o `MAX_PHOTO_BYTES`; dejo de leerlo apenas lo supera | `code`: `AUDIO_TOO_LARGE` / `PHOTO_TOO_LARGE` |
-| 415 | `/analyze`, `/classify-photo` | La firma del archivo no es WAV, FLAC o MP3 (audio) ni JPEG, PNG o WebP (foto) | `code`: `AUDIO_UNSUPPORTED` / `PHOTO_UNSUPPORTED` |
-| 422 | ambas | Falta el archivo o un campo no es válido | lista de errores de validación de FastAPI |
-| 503 | `/classify-photo` | `PHOTO_CLASSIFICATION_ENABLED=false` | `PHOTO_DISABLED_MESSAGE` |
+| 401 | `/analyze`, `/classify-photo` | Falta la clave o es incorrecta | — (`detail`: `Not authenticated` / `Invalid API key`) |
+| 413 | `/analyze`, `/classify-photo` | El archivo pasa `MAX_AUDIO_BYTES` o `MAX_PHOTO_BYTES`; dejo de leerlo apenas lo supera | `AUDIO_TOO_LARGE` / `PHOTO_TOO_LARGE` |
+| 415 | `/analyze`, `/classify-photo` | La firma del archivo no es WAV, FLAC o MP3 (audio) ni JPEG, PNG o WebP (foto) | `AUDIO_UNSUPPORTED` / `PHOTO_UNSUPPORTED` |
+| 422 | `/analyze` | Demasiado ruido de fondo | `TOO_NOISY` |
+| 422 | `/analyze` | Silencio o sin energía en la banda de aves | `NO_BIRD_SIGNAL` |
+| 422 | `/classify-photo` | Ninguna predicción alcanza `min_confidence` | `NO_BIRD_IN_PHOTO` |
+| 422 | ambas | Falta el archivo o un campo no es válido | — (lista de errores de validación de FastAPI) |
+| 503 | `/classify-photo` | `PHOTO_CLASSIFICATION_ENABLED=false` | `PHOTO_DISABLED` |

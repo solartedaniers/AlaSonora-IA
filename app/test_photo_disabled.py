@@ -24,7 +24,7 @@ def main() -> None:
         settings.photo_classification_enabled = original
 
     assert response.status_code == 503, response.status_code
-    assert response.json()["detail"] == settings.photo_disabled_message
+    assert response.json()["code"] == "PHOTO_DISABLED"
     # Con la bandera apagada nunca se carga el modelo de fotos.
     assert "app.photo_classifier" not in sys.modules
     print("photo disabled self-check: OK")

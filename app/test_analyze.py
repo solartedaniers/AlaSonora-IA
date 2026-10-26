@@ -55,16 +55,17 @@ def _check_success() -> None:
 
 
 def _check_quality_errors() -> None:
-    # Cada error de calidad se traduce en un 422 con el mensaje que el backend reenvía al usuario.
+    # Cada error de calidad responde 422 con su código en inglés; el texto para el usuario lo pone el frontend.
     expected = {
-        TooNoisyAudioError(): settings.too_noisy_message,
-        NoBirdSignalDetectedError(): settings.no_bird_signal_message,
+        TooNoisyAudioError(): "TOO_NOISY",
+        NoBirdSignalDetectedError(): "NO_BIRD_SIGNAL",
     }
-    for error, message in expected.items():
+    for error, code in expected.items():
         classifier = FakeClassifier(error=error)
         response = _post(classifier)
         assert response.status_code == 422, response.status_code
-        assert response.json()["detail"] == message
+        assert response.json()["code"] == code
+        assert response.json()["detail"], "detail stays for older backends"
         assert not os.path.exists(classifier.calls[0][0])
 
 

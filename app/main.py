@@ -15,7 +15,7 @@ from app.audio_quality import NoBirdSignalDetectedError, TooNoisyAudioError
 from app.bounded_upload import BoundedUploadReader, UploadTooLargeError
 from app.classifier import BirdNetClassifier
 from app.config import settings
-from app.errors import EngineError, register_engine_errors
+from app.errors import EngineError, ErrorCode, register_engine_errors
 from app.file_signature import HEADER_BYTES, FileSignature
 from app.schemas import ClassificationResponse, PhotoClassificationCandidate, PhotoClassificationResponse
 
@@ -41,14 +41,20 @@ app = FastAPI(title="AlaSonora AI Engine", lifespan=lifespan)
 register_engine_errors(app)
 
 
-async def _read_upload(upload: UploadFile, max_bytes: int, is_supported: Callable[[bytes], bool], kind: str) -> bytes:
+async def _read_upload(
+    upload: UploadFile,
+    max_bytes: int,
+    is_supported: Callable[[bytes], bool],
+    too_large: ErrorCode,
+    unsupported: ErrorCode,
+) -> bytes:
     """Leo el archivo con tope de tamaño y reviso su formato real antes de clasificarlo."""
     try:
         content = await BoundedUploadReader(max_bytes).read(upload)
     except UploadTooLargeError as exc:
-        raise EngineError(status.HTTP_413_CONTENT_TOO_LARGE, f"{kind}_TOO_LARGE", f"The {kind.lower()} file exceeds the maximum allowed size") from exc
+        raise EngineError(status.HTTP_413_CONTENT_TOO_LARGE, too_large) from exc
     if not is_supported(content[:HEADER_BYTES]):
-        raise EngineError(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f"{kind}_UNSUPPORTED", f"Unsupported {kind.lower()} format")
+        raise EngineError(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, unsupported)
     return content
 
 
@@ -70,7 +76,9 @@ async def analyze(
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
 ) -> ClassificationResponse:
-    content = await _read_upload(audio, settings.max_audio_bytes, FileSignature.is_supported_audio, "AUDIO")
+    content = await _read_upload(
+        audio, settings.max_audio_bytes, FileSignature.is_supported_audio, ErrorCode.AUDIO_TOO_LARGE, ErrorCode.AUDIO_UNSUPPORTED
+    )
     suffix = os.path.splitext(audio.filename or "recording.wav")[1] or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
         tmp_file.write(content)
@@ -92,9 +100,9 @@ async def analyze(
             longitude,
         )
     except TooNoisyAudioError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.too_noisy_message) from exc
+        raise EngineError(status.HTTP_422_UNPROCESSABLE_ENTITY, ErrorCode.TOO_NOISY) from exc
     except NoBirdSignalDetectedError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.no_bird_signal_message) from exc
+        raise EngineError(status.HTTP_422_UNPROCESSABLE_ENTITY, ErrorCode.NO_BIRD_SIGNAL) from exc
     finally:
         os.remove(tmp_path)
 
@@ -108,8 +116,10 @@ async def classify_photo(
     max_results: int = Form(default=settings.default_photo_max_results),
 ) -> PhotoClassificationResponse:
     if not settings.photo_classification_enabled:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=settings.photo_disabled_message)
-    image_bytes = await _read_upload(photo, settings.max_photo_bytes, FileSignature.is_supported_image, "PHOTO")
+        raise EngineError(status.HTTP_503_SERVICE_UNAVAILABLE, ErrorCode.PHOTO_DISABLED)
+    image_bytes = await _read_upload(
+        photo, settings.max_photo_bytes, FileSignature.is_supported_image, ErrorCode.PHOTO_TOO_LARGE, ErrorCode.PHOTO_UNSUPPORTED
+    )
     loop = asyncio.get_running_loop()
     candidates = await loop.run_in_executor(
         app.state.inference_pool, _classify_photo, image_bytes, min_confidence, max_results
@@ -139,4 +149,4 @@ def _classify_photo(image_bytes: bytes, min_confidence: float, max_results: int)
     try:
         return classifier.classify(image_bytes, min_confidence, max_results)
     except NoBirdInPhotoError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=settings.no_bird_in_photo_message) from exc
+        raise EngineError(status.HTTP_422_UNPROCESSABLE_ENTITY, ErrorCode.NO_BIRD_IN_PHOTO) from exc

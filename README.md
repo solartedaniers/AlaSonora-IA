@@ -62,7 +62,6 @@ Salen de `app/config.py` y se pueden poner en un `.env` (hay un ejemplo en `.env
 | `PHOTO_MODEL_ID` | Modelo de Hugging Face para fotos | No | `dennisjooo/Birds-Classifier-EfficientNetB2` |
 | `DEFAULT_PHOTO_MIN_CONFIDENCE` | Confianza mínima por foto | No | `0.3` |
 | `DEFAULT_PHOTO_MAX_RESULTS` | Resultados máximos por foto | No | `3` |
-| `TOO_NOISY_MESSAGE`, `NO_BIRD_SIGNAL_MESSAGE`, `NO_BIRD_IN_PHOTO_MESSAGE`, `PHOTO_DISABLED_MESSAGE` | Texto del `detail` que el backend le muestra al usuario. Por defecto vienen en español | No | — |
 | `PORT` | Puerto del contenedor. Solo lo lee el `Dockerfile` y Render lo inyecta | No | `8000` |
 
 ## Correrlo en local
@@ -132,7 +131,7 @@ docker run --rm -p 8000:8000 -e INTERNAL_API_KEY=<clave> -e PHOTO_CLASSIFICATION
 
 1. **Limpieza** (`AudioPreprocessor`): filtro pasa-altos y normalización de pico.
 2. **Control de calidad** (`AudioQualityAnalyzer`): si hay demasiado ruido o no hay energía en las
-   frecuencias de aves, respondo 422 con un mensaje claro en vez de dejar que BirdNET adivine.
+   frecuencias de aves, respondo 422 con un código claro en vez de dejar que BirdNET adivine.
 3. **Análisis**: BirdNET puntúa el audio en fragmentos de 3 s. Le paso la fecha de grabación y, solo
    si el dispositivo tenía GPS real, la latitud y longitud, para que filtre las especies esperables en
    esa zona.
@@ -157,7 +156,8 @@ para no congelar el event loop.
 Respuestas de error: 401 si falta la clave o no coincide, 413 si el archivo pasa el tope (`AUDIO_TOO_LARGE`,
 `PHOTO_TOO_LARGE`), 415 si su firma no es WAV, FLAC o MP3 para audio, ni JPEG, PNG o WebP para foto
 (`AUDIO_UNSUPPORTED`, `PHOTO_UNSUPPORTED`), y 422 si el audio es puro ruido, si no suena a ave o si en la
-foto no hay un ave. Los errores propios traen `code` y `detail`. El detalle, con ejemplos, está en
+foto no hay un ave (`TOO_NOISY`, `NO_BIRD_SIGNAL`, `NO_BIRD_IN_PHOTO`). Los errores propios traen un `code`
+en inglés que el backend traduce; el texto para el usuario vive en el i18n del frontend. El detalle, con ejemplos, está en
 [docs/API.md](docs/API.md).
 
 ## Despliegue en Render
