@@ -65,6 +65,11 @@ flowchart LR
     storage["Storage"]
     realtime["Realtime"]
   end
+  subgraph external["Fuentes externas"]
+    wikidata["Wikidata"]
+    commons["Wikimedia Commons"]
+    xenocanto["Xeno-canto"]
+  end
   user -->|páginas SSR y la app| fe
   user -->|API REST con JWT| be
   user -->|"GET /health para despertarlo"| ia
@@ -75,8 +80,60 @@ flowchart LR
   be --> db
   be -->|valido el JWT con JWKS| auth
   be -->|URLs firmadas y borrado| storage
+  fe -->|"SSR de /map: feed público"| be
+  db -->|"trigger: detección pública nueva"| realtime
+  be -->|"nombre en español, foto y cantos de referencia"| external
   classDef current fill:#0f766e,stroke:#134e4a,stroke-width:3px,color:#ffffff
   class ia current
+```
+
+### Arquitectura interna
+
+Las rutas de FastAPI, la validación del archivo, el pool de inferencia y el pipeline de audio con BirdNET.
+
+```mermaid
+flowchart LR
+  backend["Backend<br/>Spring Boot"]
+  browser["Navegador"]
+  subgraph routes["Rutas FastAPI (app/main.py)"]
+    health["GET y HEAD /health<br/>sin clave"]
+    analyze["POST /analyze"]
+    photo["POST /classify-photo<br/>503 si está apagada"]
+  end
+  apikey["require_api_key<br/>X-Internal-Api-Key, 401"]
+  subgraph validation["Validación del archivo"]
+    limit["BoundedUploadReader<br/>tope MAX_AUDIO_BYTES, 413"]
+    signature["FileSignature<br/>WAV, FLAC o MP3, 415"]
+  end
+  pool["ThreadPoolExecutor<br/>MAX_INFERENCE_WORKERS hilos"]
+  subgraph pipeline["Pipeline de audio (BirdNetClassifier)"]
+    clean["AudioPreprocessor<br/>pasa-altos y normalización"]
+    quality["AudioQualityAnalyzer<br/>ruido y banda de aves, 422"]
+    birdnet["BirdNET en fragmentos de 3 s<br/>con fecha y GPS opcional"]
+    rank["rank_candidates<br/>solo aves, una por especie"]
+  end
+  photomodel["Clasificador de fotos<br/>JPEG, PNG o WebP, carga perezosa"]
+  model[("Modelo BirdNET<br/>cargado una vez en lifespan")]
+  errors["app/errors.py<br/>code estable + detail"]
+
+  browser -->|"despertar"| health
+  backend -->|"despertar"| health
+  backend --> analyze
+  backend --> photo
+  analyze --> apikey
+  photo --> apikey
+  apikey -->|"audio"| limit
+  apikey -.->|"foto, solo si está activa"| photomodel
+  limit --> signature
+  signature -->|"run_in_executor"| pool
+  pool --> clean
+  clean --> quality
+  quality --> birdnet
+  model --> birdnet
+  birdnet --> rank
+  rank -->|"candidates"| backend
+  validation -.->|"413, 415"| errors
+  quality -.->|"422"| errors
 ```
 
 ## Identificación por foto: mejora futura
@@ -199,17 +256,7 @@ docker run --rm -p 8000:8000 -e INTERNAL_API_KEY=<clave> -e PHOTO_CLASSIFICATION
 ## Cómo uso BirdNET
 
 `app/classifier.py` envuelve el `Analyzer` de birdnetlib. Lo cargo una sola vez al arrancar (en el
-`lifespan` de FastAPI) y lo reutilizo en cada petición. Para cada audio:
-
-```mermaid
-flowchart LR
-  upload["Audio multipart"] --> limit["Lectura por trozos<br/>hasta MAX_AUDIO_BYTES"]
-  limit --> sig["Firma del archivo<br/>WAV, FLAC o MP3"]
-  sig --> clean["Pasa-altos y<br/>normalización"]
-  clean --> quality["Control de calidad<br/>ruido y banda de aves"]
-  quality --> birdnet["BirdNET en<br/>fragmentos de 3 s"]
-  birdnet --> rank["Ranking: solo aves,<br/>una por especie"]
-```
+`lifespan` de FastAPI) y lo reutilizo en cada petición. Para cada audio sigo los pasos del [diagrama de arquitectura interna](#arquitectura-interna):
 
 1. **Límite** (`app/bounded_upload.py`): leo el archivo por trozos y corto con 413 apenas pasa
    `MAX_AUDIO_BYTES`, sin leer más allá del tope.
